@@ -638,7 +638,7 @@ dmypy.json
 .pyre/
 
 ### VisualStudioCode ###
-HueCli/.vscode/*
+src/HueCli/.vscode/*
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
