@@ -63,6 +63,12 @@ def get_dominant_color(image: Image) -> str:
 
     return hex_color
 
+def dominant_hexcolor() -> str:
+    screenshot = get_screenshot_imgagegrab()
+    hex_color = get_dominant_color(screenshot)
+
+    return hex_color
+
 if __name__ == "__main__":
     # screenshot = get_screen_shot_c_lib()
     screenshot = get_screenshot_imgagegrab()
