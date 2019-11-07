@@ -147,14 +147,25 @@ namespace HueCli
         {
             HttpResponseMessage response = _httpClient.GetAsync($"{_bridgeModel.RootEndpoint}/lights").GetAwaiter().GetResult();
             string responseContent = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            
+
         }
 
         public void TurnOn(int lightNumber)
         {
             string turnOnState = "{\"on\": true}";
             var content = new StringContent(turnOnState, Encoding.UTF8, "application/json");
-            HttpResponseMessage response = _httpClient.PutAsync($"{_bridgeModel.RootEndpoint}/lights/1/state", content).GetAwaiter().GetResult();
+            HttpResponseMessage response = _httpClient.PutAsync($"{_bridgeModel.RootEndpoint}/lights/{lightNumber}/state", content).GetAwaiter().GetResult();
+        }
+
+        public void SetState(int lightNumber, State newState)
+        {
+            JsonSerializerSettings serializerSettings = new JsonSerializerSettings
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            };
+            string newStateStr = JsonConvert.SerializeObject(newState, serializerSettings);
+            var content = new StringContent(newStateStr, Encoding.UTF8, "application/json");
+            HttpResponseMessage response = _httpClient.PutAsync($"{_bridgeModel.RootEndpoint}/lights/{lightNumber}/state", content).GetAwaiter().GetResult();
         }
 
         private void Cache(AuthorizedBridgeModel bridgeModel) 
