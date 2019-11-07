@@ -34,16 +34,17 @@ namespace HueCli
 
         public class AuthorizedBridgeModel 
         {
-            public string BridgeId { get; set; }
-            public string BridgeIpAddress { get; set; }
+            public string Id { get; set; }
+            public string IpAddress { get; set; }
             public string UserName { get; set; }
+
+            public string RootEndpoint => $"http://{IpAddress}/api/{UserName}";
         }
 
        
         private HttpClient _httpClient;
         private const string _bridgeDiscoveryEndpoint = "https://www.meethue.com/api/nupnp";
-        private string _bridgeRootEndpoint => $"http://{_bridgeModel.BridgeIpAddress}/api";
-        private string _authorizedBridgeRootEndpoint => $"http://{_bridgeModel.BridgeIpAddress}/api/{_bridgeModel.UserName}";
+        private const string _tempUserName = "anything";
 
         private const string _bridgeAddressCacheFile = "cache.json";
         private AuthorizedBridgeModel _bridgeModel;
@@ -66,24 +67,47 @@ namespace HueCli
 
                 if (response.IsSuccessStatusCode) 
                 {
-                    string responseContent = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    string responseContent = 
+                        response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
-                    IEnumerable<FoundBridgeModel> bridges = JsonConvert.DeserializeObject<IEnumerable<FoundBridgeModel>>(responseContent);
-                    FoundBridgeModel firstBridge = bridges.FirstOrDefault();
+                    IEnumerable<FoundBridgeModel> bridges = 
+                        JsonConvert.DeserializeObject<IEnumerable<FoundBridgeModel>>(responseContent);
+                    
+                    AuthorizedBridgeModel authorizedBridgeModel = null;
+                    foreach (FoundBridgeModel bridge in bridges)
+                    {
+                        if (bridge == null) 
+                        {
+                            continue;
+                        }
 
-                    if (firstBridge == null) 
+                        string bridgeEndpoint = $"http://{bridge.IpAddress}/api";
+                        try 
+                        {
+                            SuccesfulBridgeConnectionModel succesfulBridgeConnectionModel = 
+                                TryConnect(bridgeEndpoint, _tempUserName);
+
+                            authorizedBridgeModel = new AuthorizedBridgeModel
+                            {
+                                Id = bridge.Id,
+                                IpAddress = bridge.IpAddress,
+                                UserName = succesfulBridgeConnectionModel.Success.UserName
+                            };
+
+                            break;
+                        }
+                        catch (Exception) 
+                        {
+                            // ignored
+                        }
+                    }
+
+                    if (authorizedBridgeModel == null)
                     {
                         throw new Exception("Could not find the Bridge. Try again.");
                     }
 
-                    _bridgeModel = new AuthorizedBridgeModel 
-                    {
-                        BridgeId = firstBridge.Id,
-                        BridgeIpAddress = firstBridge.IpAddress,
-                        UserName = null
-                    };
-
-                    Connect(_bridgeRootEndpoint);
+                    _bridgeModel = authorizedBridgeModel;
                     Cache(_bridgeModel);
                 }
                 else 
@@ -93,9 +117,35 @@ namespace HueCli
             }
         }
 
+        private SuccesfulBridgeConnectionModel TryConnect(string endpoint, string userName) 
+        {
+            StringContent content = new StringContent("{\"devicetype\": \"huecli#"+userName+"\"}", Encoding.UTF8, "application/json");
+            while (true) 
+            {
+                HttpResponseMessage response = _httpClient.PostAsync(endpoint, content).GetAwaiter().GetResult();
+                string responseMessage = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+
+                if (responseMessage.Contains("button not pressed") == false) 
+                {
+                    SuccesfulBridgeConnectionModel succesfulBridgeConnectionModel = 
+                        JsonConvert.DeserializeObject<IEnumerable<SuccesfulBridgeConnectionModel>>(responseMessage)
+                        .FirstOrDefault();
+
+                    Console.WriteLine($"Succesful connection. New user: {succesfulBridgeConnectionModel.Success.UserName}");
+                    return succesfulBridgeConnectionModel;
+                }
+                else 
+                {
+                    Console.WriteLine("Press the button on the Bridge.");
+                }
+
+                System.Threading.Thread.Sleep(3000);
+            }
+        }
+
         public void GetLights()
         {
-            HttpResponseMessage response = _httpClient.GetAsync($"{_authorizedBridgeRootEndpoint}/lights").GetAwaiter().GetResult();
+            HttpResponseMessage response = _httpClient.GetAsync($"{_bridgeModel.RootEndpoint}/lights").GetAwaiter().GetResult();
             string responseContent = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
             
         }
@@ -104,7 +154,7 @@ namespace HueCli
         {
             string turnOnState = "{\"on\": true}";
             var content = new StringContent(turnOnState, Encoding.UTF8, "application/json");
-            HttpResponseMessage response = _httpClient.PutAsync($"{_authorizedBridgeRootEndpoint}/lights/1/state", content).GetAwaiter().GetResult();
+            HttpResponseMessage response = _httpClient.PutAsync($"{_bridgeModel.RootEndpoint}/lights/1/state", content).GetAwaiter().GetResult();
         }
 
         private void Cache(AuthorizedBridgeModel bridgeModel) 
@@ -130,32 +180,6 @@ namespace HueCli
             else 
             {
                 return null;
-            }
-        }
-
-        private void Connect(string endpoint) 
-        {
-            string userName = "tibi";
-            StringContent content = new StringContent("{\"devicetype\": \"huecli#"+userName+"\"}", Encoding.UTF8, "application/json");
-            while (true) 
-            {
-                HttpResponseMessage response = _httpClient.PostAsync(endpoint, content).GetAwaiter().GetResult();
-                string responseMessage = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-
-                if (responseMessage.Contains("button not pressed") == false) 
-                {
-                    var succesfulBridgeConnectionModel = JsonConvert.DeserializeObject<IEnumerable<SuccesfulBridgeConnectionModel>>(responseMessage).FirstOrDefault();
-
-                    Console.WriteLine($"Succesful connection. New user: {succesfulBridgeConnectionModel.Success.UserName}");
-                    _bridgeModel.UserName = succesfulBridgeConnectionModel.Success.UserName;
-                    break;
-                } 
-                else 
-                {
-                    Console.WriteLine("Press the button on the Bridge.");
-                }
-
-                System.Threading.Thread.Sleep(3000);
             }
         }
     }
