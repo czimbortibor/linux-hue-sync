@@ -10,10 +10,13 @@ All in all: project for fun.
     - [x] python implementation to grab screenshots as that seems easier and libraries are present
     - [x] calculate the dominant color on an image
     - [ ] convert result to the correct color space needed for the bulbs
+    - [x] figure out calling python code from .netcore without external `Process` calls
 
 
 ## Getting Started
 "works on my machine" for now.
+
+The repo includes a custom built [pythonnet](https://github.com/pythonnet/pythonnet) dll, could not manage to get it working in the official way... `src/HueCli/localpackages/Python.Runtime.dll`
 
 ### Prerequisites
 - .net core 2.2
@@ -30,10 +33,3 @@ All in all: project for fun.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
-
-## Acknowledgments
-
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
-
