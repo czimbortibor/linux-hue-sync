@@ -1,7 +1,7 @@
 # HueSync (working title)
 
-Anything might change. In a gist: I need an app on my **linux** system to be able to use the [Philips Hue Entertainment](https://www2.meethue.com/en-us/entertainment). Official is non-existent, other solutions to my needs havent been found yet.
-All in all: project for fun.
+Anything might change. In a gist: I need an app on my linux system to be able to use the [Philips Hue Entertainment](https://www2.meethue.com/en-us/entertainment). Official is non-existent, other solutions to my needs havent been found yet.
+All in all: project for fun with an overcomplicated stack.
 
 ## Plan of attack
 - [x] Http client in .netcore to communicate with the Hue Bridge:
