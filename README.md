@@ -19,7 +19,7 @@ All in all: project for fun with an overcomplicated stack.
 The repo includes a custom built [pythonnet](https://github.com/pythonnet/pythonnet) dll, could not manage to get it working in the official way... `src/HueCli/localpackages/Python.Runtime.dll`
 
 ### Prerequisites
-- .net core 2.2
+- .net core 3.1
 - python libs:
     - tkinter
     - PIL

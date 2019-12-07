@@ -9,7 +9,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/HueCli/bin/Debug/netcoreapp2.2/HueCli.dll",
+            "program": "${workspaceFolder}/src/bin/Debug/netcoreapp3.1/HueCli.dll",
             "args": [],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,
