@@ -10,8 +10,10 @@ All in all: project for fun with an overcomplicated stack.
     - [ ] some fast, low-level, closest-to-graphics app to grab screenshots: partly done with Xlib, but results not satisfactory
     - [x] python implementation to grab screenshots as that seems easier and libraries are present
     - [x] calculate the dominant color on an image
-    - [ ] convert result to the correct color space needed for the bulbs
+    - [x] convert result to the correct color space needed for the bulbs
+        - [ ] double check
     - [x] figure out calling python code from .netcore without external `Process` calls
+- [ ] implement color syncing in a more advanced way: map the display with the entertainment area/light bulbs
 
 
 ## Getting Started
