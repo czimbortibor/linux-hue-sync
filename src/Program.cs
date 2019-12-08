@@ -18,7 +18,10 @@ namespace HueCli
             for (;;)
             {
                 (float x, float y, float z) = GetColorFromScreen();
-                
+
+                x = x / (x + y + z);
+                y = y / (x + y + z);
+
                 State newState = new State
                 {
                     Xy = new double[2] { x, y },
