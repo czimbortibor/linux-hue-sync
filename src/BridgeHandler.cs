@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 namespace HueCli 
@@ -24,19 +23,19 @@ namespace HueCli
             _httpClient = new HttpClient();
         }
 
-        public async Task EstablishConnection() 
+        public void EstablishConnection() 
         {
-            _bridgeModel = await TryReadFromCache();
+            _bridgeModel = TryReadFromCache();
 
             if (_bridgeModel == null) 
             {
                 Console.WriteLine("Lets try to find your Bridge...");
 
-                HttpResponseMessage response = await _httpClient.GetAsync(_bridgeDiscoveryEndpoint);
+                HttpResponseMessage response = _httpClient.GetAsync(_bridgeDiscoveryEndpoint).GetAwaiter().GetResult();
 
                 response.EnsureSuccessStatusCode();
 
-                string responseContent = await response.Content.ReadAsStringAsync();
+                string responseContent = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
                 IEnumerable<FoundBridgeModel> bridges = 
                     JsonConvert.DeserializeObject<IEnumerable<FoundBridgeModel>>(responseContent);
@@ -52,8 +51,7 @@ namespace HueCli
                     string bridgeEndpoint = $"http://{bridge.IpAddress}/api";
                     try 
                     {
-                        SuccesfulBridgeConnectionModel succesfulBridgeConnectionModel = 
-                            await TryConnect(bridgeEndpoint, _tempUserName);
+                        SuccesfulBridgeConnectionModel succesfulBridgeConnectionModel = TryConnect(bridgeEndpoint, _tempUserName);
 
                         authorizedBridgeModel = new AuthorizedBridgeModel
                         {
@@ -76,19 +74,19 @@ namespace HueCli
                 }
 
                 _bridgeModel = authorizedBridgeModel;
-                await Cache(_bridgeModel);
+                Cache(_bridgeModel);
             }
         }
 
-        private async Task<SuccesfulBridgeConnectionModel> TryConnect(string endpoint, string userName) 
+        private SuccesfulBridgeConnectionModel TryConnect(string endpoint, string userName) 
         {
             StringContent content = new StringContent("{\"devicetype\": \"huecli#"+userName+"\"}", Encoding.UTF8, "application/json");
             while (true) 
             {
-                HttpResponseMessage response = await _httpClient.PostAsync(endpoint, content);
+                HttpResponseMessage response = _httpClient.PostAsync(endpoint, content).GetAwaiter().GetResult();
                 response.EnsureSuccessStatusCode();
 
-                string responseMessage = await response.Content.ReadAsStringAsync();
+                string responseMessage = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
                 if (responseMessage.Contains("button not pressed") == false) 
                 {
@@ -108,23 +106,22 @@ namespace HueCli
             }
         }
 
-        public async Task GetLights()
+        public void GetLights()
         {
-            HttpResponseMessage response = await _httpClient.GetAsync($"{_bridgeModel.RootEndpoint}/lights");
+            HttpResponseMessage response = _httpClient.GetAsync($"{_bridgeModel.RootEndpoint}/lights").GetAwaiter().GetResult();
             response.EnsureSuccessStatusCode();
-            string responseContent = await response.Content.ReadAsStringAsync();
+            string responseContent = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
         }
 
-        public async Task TurnOn(int lightNumber)
+        public void TurnOn(int lightNumber)
         {
             string turnOnState = "{\"on\": true}";
             var content = new StringContent(turnOnState, Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await _httpClient.PutAsync($"{_bridgeModel.RootEndpoint}/lights/{lightNumber}/state", content);
-            response.EnsureSuccessStatusCode();
+            HttpResponseMessage response = _httpClient.PutAsync($"{_bridgeModel.RootEndpoint}/lights/{lightNumber}/state", content).GetAwaiter().GetResult();
         }
 
-        public async Task SetState(int lightNumber, State newState)
+        public void SetState(int lightNumber, State newState)
         {
             JsonSerializerSettings serializerSettings = new JsonSerializerSettings
             {
@@ -132,26 +129,25 @@ namespace HueCli
             };
             string newStateStr = JsonConvert.SerializeObject(newState, serializerSettings);
             var content = new StringContent(newStateStr, Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await _httpClient.PutAsync($"{_bridgeModel.RootEndpoint}/lights/{lightNumber}/state", content);
-            response.EnsureSuccessStatusCode();
+            HttpResponseMessage response = _httpClient.PutAsync($"{_bridgeModel.RootEndpoint}/lights/{lightNumber}/state", content).GetAwaiter().GetResult();
         }
 
-        private async Task Cache(AuthorizedBridgeModel bridgeModel) 
+        private void Cache(AuthorizedBridgeModel bridgeModel) 
         {
             using (var writer = new StreamWriter(_bridgeAddressCacheFile, append: false))
             {
                 string serializedBrigeModel = JsonConvert.SerializeObject(bridgeModel);
-                await writer.WriteAsync(serializedBrigeModel);
+                writer.Write(serializedBrigeModel);
             }
         }
 
-        private async Task<AuthorizedBridgeModel> TryReadFromCache()
+        private AuthorizedBridgeModel TryReadFromCache()
         {
             if (File.Exists(_bridgeAddressCacheFile))
             {
                 using (var reader = new StreamReader(_bridgeAddressCacheFile))
                 {
-                    string serializedBrigeModel = await reader.ReadToEndAsync();
+                    string serializedBrigeModel = reader.ReadToEnd();
                     var bridgeModel = JsonConvert.DeserializeObject<AuthorizedBridgeModel>(serializedBrigeModel);
                     return bridgeModel;
                 }

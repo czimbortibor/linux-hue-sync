@@ -72,7 +72,7 @@ def convert_hex_to_xyz(hex_color: str) -> (float, float, float):
 
     # xyz = convert_color(clampedRgbColors, XYZColor, through_rgb_type=AdobeRGBColor)
 
-    xyz_color = convert_color(adobe_rgb_color, XYZColor, through_rgb_type=AdobeRGBColor, target_illuminant='d50')
+    xyz_color = convert_color(adobe_rgb_color, XYZColor, through_rgb_type=AdobeRGBColor, target_illuminant='d65')
 
     return xyz_color.get_value_tuple()
 
