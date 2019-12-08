@@ -5,6 +5,7 @@ All in all: project for fun with an overcomplicated stack.
 
 ## Plan of attack
 - [x] Http client in .netcore to communicate with the Hue Bridge:
+    - [ ] make it async (looks like have to get rid of python to achieve it)
 - [ ] implement color syncing in the most basic way: grab a screenshot from the main display and determine the dominant color:
     - [ ] some fast, low-level, closest-to-graphics app to grab screenshots: partly done with Xlib, but results not satisfactory
     - [x] python implementation to grab screenshots as that seems easier and libraries are present
