@@ -22,6 +22,7 @@ namespace HueCli
             using (Py.GIL())
             {
                 dynamic sys = Py.Import("sys");
+                // TODO remove this dev path
                 sys.path.append("/home/tiborczimbor/linux-hue-sync/src/ColorProcesser/");
 
                 dynamic colorProcesser = Py.Import("get_dominant_color");

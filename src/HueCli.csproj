@@ -9,7 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
     <Reference Include="Python.Runtime">
-      <HintPath>localpackages/Python.Runtime.dll</HintPath>
+      <HintPath>../localpackages/Python.Runtime.dll</HintPath>
     </Reference>
   </ItemGroup>
 
