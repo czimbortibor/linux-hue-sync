@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 namespace HueCli 
@@ -23,19 +24,19 @@ namespace HueCli
             _httpClient = new HttpClient();
         }
 
-        public void EstablishConnection() 
+        public async Task EstablishConnection() 
         {
-            _bridgeModel = TryReadFromCache();
+            _bridgeModel = await TryReadFromCache();
 
             if (_bridgeModel == null) 
             {
                 Console.WriteLine("Lets try to find your Bridge...");
 
-                HttpResponseMessage response = _httpClient.GetAsync(_bridgeDiscoveryEndpoint).GetAwaiter().GetResult();
+                HttpResponseMessage response = await _httpClient.GetAsync(_bridgeDiscoveryEndpoint);
 
                 response.EnsureSuccessStatusCode();
 
-                string responseContent = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                string responseContent = await response.Content.ReadAsStringAsync();
 
                 IEnumerable<FoundBridgeModel> bridges = 
                     JsonConvert.DeserializeObject<IEnumerable<FoundBridgeModel>>(responseContent);
@@ -51,7 +52,7 @@ namespace HueCli
                     string bridgeEndpoint = $"http://{bridge.IpAddress}/api";
                     try 
                     {
-                        SuccesfulBridgeConnectionModel succesfulBridgeConnectionModel = TryConnect(bridgeEndpoint, _tempUserName);
+                        SuccesfulBridgeConnectionModel succesfulBridgeConnectionModel = await TryConnect(bridgeEndpoint, _tempUserName);
 
                         authorizedBridgeModel = new AuthorizedBridgeModel
                         {
@@ -74,19 +75,19 @@ namespace HueCli
                 }
 
                 _bridgeModel = authorizedBridgeModel;
-                Cache(_bridgeModel);
+                await Cache(_bridgeModel);
             }
         }
 
-        private SuccesfulBridgeConnectionModel TryConnect(string endpoint, string userName) 
+        private async Task<SuccesfulBridgeConnectionModel> TryConnect(string endpoint, string userName) 
         {
             StringContent content = new StringContent("{\"devicetype\": \"huecli#"+userName+"\"}", Encoding.UTF8, "application/json");
             while (true) 
             {
-                HttpResponseMessage response = _httpClient.PostAsync(endpoint, content).GetAwaiter().GetResult();
+                HttpResponseMessage response = await _httpClient.PostAsync(endpoint, content);
                 response.EnsureSuccessStatusCode();
 
-                string responseMessage = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                string responseMessage = await response.Content.ReadAsStringAsync();
 
                 if (responseMessage.Contains("button not pressed") == false) 
                 {
@@ -106,22 +107,24 @@ namespace HueCli
             }
         }
 
-        public void GetLights()
+        public async Task GetLights()
         {
-            HttpResponseMessage response = _httpClient.GetAsync($"{_bridgeModel.RootEndpoint}/lights").GetAwaiter().GetResult();
+            HttpResponseMessage response = await _httpClient.GetAsync($"{_bridgeModel.RootEndpoint}/lights");
             response.EnsureSuccessStatusCode();
-            string responseContent = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+
+            string responseContent = await response.Content.ReadAsStringAsync();
 
         }
 
-        public void TurnOn(int lightNumber)
+        public async Task TurnOn(int lightNumber)
         {
             string turnOnState = "{\"on\": true}";
             var content = new StringContent(turnOnState, Encoding.UTF8, "application/json");
-            HttpResponseMessage response = _httpClient.PutAsync($"{_bridgeModel.RootEndpoint}/lights/{lightNumber}/state", content).GetAwaiter().GetResult();
+            HttpResponseMessage response = await _httpClient.PutAsync($"{_bridgeModel.RootEndpoint}/lights/{lightNumber}/state", content);
+            response.EnsureSuccessStatusCode();
         }
 
-        public void SetState(int lightNumber, State newState)
+        public async Task SetState(int lightNumber, State newState)
         {
             JsonSerializerSettings serializerSettings = new JsonSerializerSettings
             {
@@ -129,25 +132,26 @@ namespace HueCli
             };
             string newStateStr = JsonConvert.SerializeObject(newState, serializerSettings);
             var content = new StringContent(newStateStr, Encoding.UTF8, "application/json");
-            HttpResponseMessage response = _httpClient.PutAsync($"{_bridgeModel.RootEndpoint}/lights/{lightNumber}/state", content).GetAwaiter().GetResult();
+            HttpResponseMessage response = await _httpClient.PutAsync($"{_bridgeModel.RootEndpoint}/lights/{lightNumber}/state", content);
+            response.EnsureSuccessStatusCode();
         }
 
-        private void Cache(AuthorizedBridgeModel bridgeModel) 
+        private async Task Cache(AuthorizedBridgeModel bridgeModel) 
         {
             using (var writer = new StreamWriter(_bridgeAddressCacheFile, append: false))
             {
                 string serializedBrigeModel = JsonConvert.SerializeObject(bridgeModel);
-                writer.Write(serializedBrigeModel);
+                await writer.WriteAsync(serializedBrigeModel);
             }
         }
 
-        private AuthorizedBridgeModel TryReadFromCache()
+        private async Task<AuthorizedBridgeModel> TryReadFromCache()
         {
             if (File.Exists(_bridgeAddressCacheFile))
             {
                 using (var reader = new StreamReader(_bridgeAddressCacheFile))
                 {
-                    string serializedBrigeModel = reader.ReadToEnd();
+                    string serializedBrigeModel = await reader.ReadToEndAsync();
                     var bridgeModel = JsonConvert.DeserializeObject<AuthorizedBridgeModel>(serializedBrigeModel);
                     return bridgeModel;
                 }

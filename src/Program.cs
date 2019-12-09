@@ -13,7 +13,7 @@ namespace HueCli
 
 
             BridgeHandler bridgeHandler = new BridgeHandler();
-            bridgeHandler.EstablishConnection();
+            await bridgeHandler.EstablishConnection();
 
             // await bridgeHandler.GetLights();
             // await bridgeHandler.TurnOn(lightNumber: 1);
@@ -33,7 +33,7 @@ namespace HueCli
                 };
 
                 // bridgeHandler.SetState(1, newState);
-                bridgeHandler.SetState(lightNumber: 2, newState);
+                await bridgeHandler.SetState(lightNumber: 2, newState);
 
                 Thread.Sleep(100);
             }
