@@ -6,33 +6,81 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace HueCli 
 {
-    public class BridgeHandler 
+    public class BridgeHandler : BackgroundService
     {
-        private HttpClient _httpClient;
+        private IHttpClientFactory _httpClientFactory;
+        private readonly ILogger<BridgeHandler> _logger;
+
         private const string _bridgeDiscoveryEndpoint = "https://www.meethue.com/api/nupnp";
         private const string _tempUserName = "anything";
 
         private const string _bridgeAddressCacheFile = "cache.json";
         private AuthorizedBridgeModel _bridgeModel;
 
-        public BridgeHandler()
+
+        public BridgeHandler(IHttpClientFactory httpClientFactory, ILogger<BridgeHandler> logger)
         {
-            _httpClient = new HttpClient();
+            _httpClientFactory = httpClientFactory;
+            _logger = logger;
+        }
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            while (stoppingToken.IsCancellationRequested == false)
+            {
+                await DoWork();
+                
+                await Task.Delay(100);
+            }
+        }
+
+        private async Task DoWork()
+        {
+            var colorProcesser = new ColorProcesser();
+
+            (float x, float y) = await colorProcesser.CalculateDominantColorInXY();
+
+            State newState = new State
+            {
+                Xy = new double[2] { x, y },
+                Sat = 254,
+                On = true,
+                Bri = 200,
+                Reachable = true
+            };
+
+            await SetState(lightNumber: 2, newState);
+        }
+
+        public override async Task StartAsync(CancellationToken cancellationToken)
+        {
+            await EstablishConnection();
+
+            await base.StartAsync(cancellationToken);
+        }
+
+        public override Task StopAsync(CancellationToken cancellationToken)
+        {
+            return base.StopAsync(cancellationToken);
         }
 
         public async Task EstablishConnection() 
         {
+            var httpClient = _httpClientFactory.CreateClient();
+
             _bridgeModel = await TryReadFromCache();
 
             if (_bridgeModel == null) 
             {
                 Console.WriteLine("Lets try to find your Bridge...");
 
-                HttpResponseMessage response = await _httpClient.GetAsync(_bridgeDiscoveryEndpoint);
+                HttpResponseMessage response = await httpClient.GetAsync(_bridgeDiscoveryEndpoint);
 
                 response.EnsureSuccessStatusCode();
 
@@ -81,10 +129,12 @@ namespace HueCli
 
         private async Task<SuccesfulBridgeConnectionModel> TryConnect(string endpoint, string userName) 
         {
+            var httpClient = _httpClientFactory.CreateClient();
+
             StringContent content = new StringContent("{\"devicetype\": \"huecli#"+userName+"\"}", Encoding.UTF8, "application/json");
             while (true) 
             {
-                HttpResponseMessage response = await _httpClient.PostAsync(endpoint, content);
+                HttpResponseMessage response = await httpClient.PostAsync(endpoint, content);
                 response.EnsureSuccessStatusCode();
 
                 string responseMessage = await response.Content.ReadAsStringAsync();
@@ -109,7 +159,9 @@ namespace HueCli
 
         public async Task GetLights()
         {
-            HttpResponseMessage response = await _httpClient.GetAsync($"{_bridgeModel.RootEndpoint}/lights");
+            var httpClient = _httpClientFactory.CreateClient();
+
+            HttpResponseMessage response = await httpClient.GetAsync($"{_bridgeModel.RootEndpoint}/lights");
             response.EnsureSuccessStatusCode();
 
             string responseContent = await response.Content.ReadAsStringAsync();
@@ -118,21 +170,25 @@ namespace HueCli
 
         public async Task TurnOn(int lightNumber)
         {
+            var httpClient = _httpClientFactory.CreateClient();
+
             string turnOnState = "{\"on\": true}";
             var content = new StringContent(turnOnState, Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await _httpClient.PutAsync($"{_bridgeModel.RootEndpoint}/lights/{lightNumber}/state", content);
+            HttpResponseMessage response = await httpClient.PutAsync($"{_bridgeModel.RootEndpoint}/lights/{lightNumber}/state", content);
             response.EnsureSuccessStatusCode();
         }
 
         public async Task SetState(int lightNumber, State newState)
         {
+            var httpClient = _httpClientFactory.CreateClient();
+
             JsonSerializerSettings serializerSettings = new JsonSerializerSettings
             {
                 NullValueHandling = NullValueHandling.Ignore
             };
             string newStateStr = JsonConvert.SerializeObject(newState, serializerSettings);
             var content = new StringContent(newStateStr, Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await _httpClient.PutAsync($"{_bridgeModel.RootEndpoint}/lights/{lightNumber}/state", content);
+            HttpResponseMessage response = await httpClient.PutAsync($"{_bridgeModel.RootEndpoint}/lights/{lightNumber}/state", content);
             response.EnsureSuccessStatusCode();
         }
 
